@@ -1,6 +1,7 @@
 # Chapter 1: Basic Setup
 
 ## Overview
+In this chapter, we'll set up a basic actix-web project from scratch and create our first "Hello World" server.
 
 ## Step 1: Create a New Rust Project
 
