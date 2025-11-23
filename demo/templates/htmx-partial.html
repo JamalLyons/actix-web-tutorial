@@ -1,0 +1,9 @@
+<div class="htmx-content">
+    <h3>✨ Content Loaded via HTMX!</h3>
+    <p>This content was loaded dynamically without a full page refresh.</p>
+    <p>Current time: <strong id="current-time"></strong></p>
+    <script>
+        document.getElementById('current-time').textContent = new Date().toLocaleString();
+    </script>
+</div>
+
