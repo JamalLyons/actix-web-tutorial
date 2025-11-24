@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse, HttpRequest};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -18,17 +18,16 @@ struct AppState {
     users: Arc<Mutex<Vec<String>>>,
 }
 
-async fn get_users(
-    query: web::Query<Pagination>,
-    data: web::Data<AppState>,
-) -> impl Responder {
+async fn get_users(query: web::Query<Pagination>, data: web::Data<AppState>) -> impl Responder {
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(10);
     let users = data.users.lock().unwrap();
 
     HttpResponse::Ok().json(format!(
         "Page: {}, Limit: {}, Users: {}",
-        page, limit, users.len()
+        page,
+        limit,
+        users.len()
     ))
 }
 
@@ -39,7 +38,8 @@ async fn create_user(
     data: web::Data<AppState>,
 ) -> impl Responder {
     let account_id = path.into_inner();
-    let user_agent = req.headers()
+    let user_agent = req
+        .headers()
         .get("user-agent")
         .and_then(|h| h.to_str().ok())
         .unwrap_or("Unknown");
