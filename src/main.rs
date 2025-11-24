@@ -1,83 +1,70 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
-struct User {
-    id: u32,
-    name: String,
-    email: String,
+// User handlers
+async fn list_users() -> impl Responder {
+    HttpResponse::Ok().body("List all users")
 }
 
-#[derive(Deserialize)]
-struct CreateUser {
-    name: String,
-    email: String,
+async fn get_user() -> impl Responder {
+    HttpResponse::Ok().body("Get user by ID")
 }
 
-#[derive(Deserialize)]
-struct Pagination {
-    page: Option<u32>,
-    limit: Option<u32>,
+async fn create_user() -> impl Responder {
+    HttpResponse::Created().body("Create new user")
 }
 
-async fn get_users(query: web::Query<Pagination>) -> impl Responder {
-    let page = query.page.unwrap_or(1);
-    let limit = query.limit.unwrap_or(10);
-    HttpResponse::Ok().json(format!("Fetching users: page={}, limit={}", page, limit))
+async fn update_user() -> impl Responder {
+    HttpResponse::Ok().body("Update user")
 }
 
-async fn get_user(path: web::Path<u32>) -> impl Responder {
-    let user_id = path.into_inner();
-    let user = User {
-        id: user_id,
-        name: "Alice".to_string(),
-        email: "alice@example.com".to_string(),
-    };
-    HttpResponse::Ok().json(user)
+async fn delete_user() -> impl Responder {
+    HttpResponse::Ok().body("Delete user")
 }
 
-async fn create_user(user: web::Json<CreateUser>) -> impl Responder {
-    let new_user = User {
-        id: 1,
-        name: user.name.clone(),
-        email: user.email.clone(),
-    };
-    HttpResponse::Created().json(new_user)
+// Post handlers
+async fn list_posts() -> impl Responder {
+    HttpResponse::Ok().body("List all posts")
 }
 
-#[derive(Deserialize)]
-struct UpdateUser {
-    name: Option<String>,
-    email: Option<String>,
+async fn get_post() -> impl Responder {
+    HttpResponse::Ok().body("Get post by ID")
 }
 
-async fn update_user(path: web::Path<u32>, user: web::Json<UpdateUser>) -> impl Responder {
-    let user_id = path.into_inner();
-    let updated_user = User {
-        id: user_id,
-        name: user.name.clone().unwrap_or_else(|| "Unknown".to_string()),
-        email: user
-            .email
-            .clone()
-            .unwrap_or_else(|| "unknown@example.com".to_string()),
-    };
-    HttpResponse::Ok().json(updated_user)
+// Health check
+async fn health() -> impl Responder {
+    HttpResponse::Ok().body("OK")
 }
 
-async fn delete_user(path: web::Path<u32>) -> impl Responder {
-    let user_id = path.into_inner();
-    HttpResponse::Ok().json(format!("User {} deleted", user_id))
+// 404 handler
+async fn not_found() -> impl Responder {
+    HttpResponse::NotFound().json("Not found")
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
-            .route("/users", web::get().to(get_users))
-            .route("/users/{id}", web::get().to(get_user))
-            .route("/users", web::post().to(create_user))
-            .route("/users/{id}", web::put().to(update_user))
-            .route("/users/{id}", web::delete().to(delete_user))
+            // Health check route
+            .route("/health", web::get().to(health))
+            // API routes organized by resource
+            .service(
+                web::scope("/api")
+                    .service(
+                        web::resource("/users")
+                            .route(web::get().to(list_users))
+                            .route(web::post().to(create_user)),
+                    )
+                    .service(
+                        web::resource("/users/{id}")
+                            .route(web::get().to(get_user))
+                            .route(web::put().to(update_user))
+                            .route(web::delete().to(delete_user)),
+                    )
+                    .service(web::resource("/posts").route(web::get().to(list_posts)))
+                    .service(web::resource("/posts/{id}").route(web::get().to(get_post))),
+            )
+            // Default route for unmatched paths
+            .default_service(web::route().to(not_found))
     })
     .bind("127.0.0.1:8080")?
     .run()
