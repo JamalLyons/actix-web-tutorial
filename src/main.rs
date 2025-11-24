@@ -1,69 +1,76 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse, HttpRequest};
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use actix_web::{web, App, HttpServer, Responder, HttpResponse};
 
-#[derive(Deserialize, Serialize)]
-struct CreateUser {
-    name: String,
-    email: String,
+// User handlers
+async fn list_users() -> impl Responder {
+    HttpResponse::Ok().body("List all users")
 }
 
-#[derive(Deserialize)]
-struct Pagination {
-    page: Option<u32>,
-    limit: Option<u32>,
+async fn get_user() -> impl Responder {
+    HttpResponse::Ok().body("Get user by ID")
 }
 
-struct AppState {
-    users: Arc<Mutex<Vec<String>>>,
+async fn create_user() -> impl Responder {
+    HttpResponse::Created().body("Create new user")
 }
 
-async fn get_users(
-    query: web::Query<Pagination>,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    let page = query.page.unwrap_or(1);
-    let limit = query.limit.unwrap_or(10);
-    let users = data.users.lock().unwrap();
-
-    HttpResponse::Ok().json(format!(
-        "Page: {}, Limit: {}, Users: {}",
-        page, limit, users.len()
-    ))
+async fn update_user() -> impl Responder {
+    HttpResponse::Ok().body("Update user")
 }
 
-async fn create_user(
-    path: web::Path<u32>,
-    body: web::Json<CreateUser>,
-    req: HttpRequest,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    let account_id = path.into_inner();
-    let user_agent = req.headers()
-        .get("user-agent")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("Unknown");
+async fn delete_user() -> impl Responder {
+    HttpResponse::Ok().body("Delete user")
+}
 
-    let mut users = data.users.lock().unwrap();
-    users.push(body.name.clone());
+// Post handlers
+async fn list_posts() -> impl Responder {
+    HttpResponse::Ok().body("List all posts")
+}
 
-    HttpResponse::Created().json(format!(
-        "Created user {} for account {} from {}",
-        body.name, account_id, user_agent
-    ))
+async fn get_post() -> impl Responder {
+    HttpResponse::Ok().body("Get post by ID")
+}
+
+// Health check
+async fn health() -> impl Responder {
+    HttpResponse::Ok().body("OK")
+}
+
+// 404 handler
+async fn not_found() -> impl Responder {
+    HttpResponse::NotFound().json("Not found")
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let app_state = web::Data::new(AppState {
-        users: Arc::new(Mutex::new(Vec::new())),
-    });
-
-    HttpServer::new(move || {
+    HttpServer::new(|| {
         App::new()
-            .app_data(app_state.clone())
-            .route("/accounts/{id}/users", web::get().to(get_users))
-            .route("/accounts/{id}/users", web::post().to(create_user))
+            // Health check route
+            .route("/health", web::get().to(health))
+            // API routes organized by resource
+            .service(
+                web::scope("/api")
+                    .service(
+                        web::resource("/users")
+                            .route(web::get().to(list_users))
+                            .route(web::post().to(create_user))
+                    )
+                    .service(
+                        web::resource("/users/{id}")
+                            .route(web::get().to(get_user))
+                            .route(web::put().to(update_user))
+                            .route(web::delete().to(delete_user))
+                    )
+                    .service(
+                        web::resource("/posts")
+                            .route(web::get().to(list_posts))
+                    )
+                    .service(
+                        web::resource("/posts/{id}")
+                            .route(web::get().to(get_post))
+                    )
+            )
+            // Default route for unmatched paths
+            .default_service(web::route().to(not_found))
     })
     .bind("127.0.0.1:8080")?
     .run()
