@@ -9,7 +9,7 @@ We need several crates for authentication: `actix-session` for managing user ses
 
 ```toml
 [dependencies]
-actix-session = { version = "0.8", features = ["cookie"] }
+actix-session = { version = "0.8", features = ["cookie-session"] }
 actix-web-httpauth = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
 ```
